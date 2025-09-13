@@ -1,0 +1,27 @@
+{
+  "name": "todo-app",
+  "version": "1.0.0",
+  "description": "todo-app for devops practices",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "cross-env NODE_ENV=test node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
+    "start": "node src/server.js"
+  },
+  "author": "Ahmed-Ezzat",
+  "license": "ISC",
+  "dependencies": {
+    "cross-env": "^10.0.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "mongodb": "^6.19.0",
+    "supertest": "^7.1.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+  "testEnvironment": "node",
+  "transform": {}
+}
+}

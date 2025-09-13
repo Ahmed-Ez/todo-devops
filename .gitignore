@@ -1,0 +1,19 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-lock.yaml
+coverage
+
+# Env files
+.env
+.env.test
+
+# Logs
+logs
+*.log
+
+# OS/Editor junk
+.DS_Store
+.vscode/
+.idea/
