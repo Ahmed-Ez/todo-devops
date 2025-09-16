@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app-deployment
+  namespace: todo-app
+
+spec:
+  selector:
+    matchLabels:
+      app: todo-app
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: todo-app
+    spec:
+      containers:
+        - name: app
+          image: ahmedezz9/todo-app:alpine
+          envFrom:
+            - configMapRef:
+                name: todo-app-config
+            - secretRef:
+                name: todo-app-secrets
+          ports:
+            - containerPort: 8000

@@ -17,3 +17,8 @@ logs
 .DS_Store
 .vscode/
 .idea/
+
+# K8s
+/k8s/secrets.yaml
+!/k8s/secrets.example.yaml
+
