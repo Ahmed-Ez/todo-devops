@@ -1,9 +1,11 @@
 import express from 'express';
 import { MongoClient } from 'mongodb';
+import { requireApiKey } from './middleware/apiKey.js';
 
 export async function buildApp({ mongoUri, dbName }) {
   const app = express();
   app.use(express.json());
+  app.use(requireApiKey);
 
   // Mongo connection
   const client = new MongoClient(mongoUri);
