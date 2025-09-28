@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-app-public
+  namespace: todo-app
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - "<YOUR_IP>/32"
+  selector:
+    app: todo-app            # same labels as your Deployment
+  ports:
+    - port: 80               # public port on the LB
+      targetPort: 8000       # your container port
+      protocol: TCP

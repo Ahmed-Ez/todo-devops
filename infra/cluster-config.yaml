@@ -1,0 +1,34 @@
+# eksctl cluster config (cost-optimized lab)
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: todo-app
+  region: us-east-1
+
+iam:
+  withOIDC: true
+
+vpc:
+  # For labs: no NAT (cheapest); nodes in public subnets
+  nat:
+    gateway: Disable
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: false
+
+managedNodeGroups:
+  - name: ng-spot
+    instanceTypes: ["t3a.small","t3.small"]
+    spot: true
+    desiredCapacity: 1
+    minSize: 0
+    maxSize: 2
+    privateNetworking: false      # public subnets
+    volumeSize: 20
+    labels: { workload: api }
+    tags: { Name: "devops-demo-ng-spot" }
+    ssh:
+      allow: false
+
+# Optionally pre-create a 'dev' namespace
+availabilityZones: []   # let eksctl pick
