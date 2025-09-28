@@ -19,7 +19,7 @@ jobs:
     env:
       MONGODB_URI: mongodb://127.0.0.1:27017/todo_test
       NODE_ENV: test
-      API_TOKEN: ${{ secrets.API_TOKEN }}
+      API_KEY: ${{ secrets.API_TOKEN }}
 
     steps:
       - uses: actions/checkout@v5

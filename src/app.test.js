@@ -12,7 +12,7 @@ let app, server;
 
 // prefer API_AUTH_TOKEN (CI secret), fallback for local dev
 const API_KEY =
-  process.env.API_TOKEN ||
+  process.env.API_KEY ||
   process.env.X_API_KEY ||
   'test-token';
 
