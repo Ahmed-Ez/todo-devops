@@ -90,6 +90,8 @@ jobs:
       DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'docker.io/ahmedezz9/todo-app' }}
       IMAGE_DIGEST: ${{ needs.push_to_registry.outputs.digest }}
     steps:
+      - uses: actions/checkout@v5
+      
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
         with:
