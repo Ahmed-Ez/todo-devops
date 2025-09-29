@@ -3,34 +3,37 @@ kind: Deployment
 metadata:
   name: todo-app-deployment
   namespace: todo-app
-
+  labels:
+    app: todo-app
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: todo-app
-  replicas: 2
   template:
     metadata:
       labels:
         app: todo-app
     spec:
       containers:
-        - name: app
-          image: ahmedezz9/todo-app:alpine
+        - name: todo-app-deployment
+          image: IMAGE_URI
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
           envFrom:
             - configMapRef:
                 name: todo-app-config
             - secretRef:
                 name: todo-app-secrets
-          ports:
-            - containerPort: 8000
+
           resources:
             requests:
-              memory: "265Mi"
               cpu: "100m"
+              memory: "128Mi"
             limits:
-              memory: "512Mi"
               cpu: "500m"
+              memory: "512Mi"
           livenessProbe:
             httpGet:
               path: /healthz

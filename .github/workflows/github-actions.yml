@@ -23,16 +23,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-
       - name: Use node.js
         uses: actions/setup-node@v4
         with:
           node-version: 16.x
           cache: npm
-
       - run: npm ci
-
-      # (optional) extra wait in case healthcheck cmd isn't available
       - name: Wait for Mongo
         shell: bash
         run: |
@@ -40,39 +36,36 @@ jobs:
             (echo > /dev/tcp/127.0.0.1/27017) >/dev/null 2>&1 && break
             sleep 1
           done
-
       - name: Run tests
         run: npm test -- --runInBand
-
 
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     environment: demo
+    needs: [test]
     permissions:
       packages: write
       contents: read
       attestations: write
       id-token: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v5
-
+      - uses: actions/checkout@v5
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USER}}
+          username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_SECRET }}
-
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract metadata (tags, labels)
         id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        uses: docker/metadata-action@v5
         with:
-          images: ahmedezz9/todo-app
-
+          images: docker.io/ahmedezz9/todo-app
       - name: Build and push Docker image
         id: push
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -80,3 +73,61 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  deploy_to_eks:
+    name: Deploy to eks
+    runs-on: ubuntu-latest
+    environment: demo
+    needs: [push_to_registry]
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'todo-app' }}
+      DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'docker.io/ahmedezz9/todo-app' }}
+      IMAGE_DIGEST: ${{ needs.push_to_registry.outputs.digest }}
+    steps:
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.30.0'
+
+      - name: Configure AWS creds (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${EKS_CLUSTER_NAME}" --region "${AWS_REGION}"
+
+      - name: Ensure namespace exists
+        run: kubectl get ns "${K8S_NAMESPACE}" || kubectl create ns "${K8S_NAMESPACE}"
+
+      - name: Install envsubst
+        run: sudo apt-get update && sudo apt-get install -y gettext-base
+
+      - name: Render secrets from GH
+        env:
+          K8S_NAMESPACE: ${{ env.K8S_NAMESPACE }}
+          MONGODB_URI: ${{ secrets.ATLAS_URI }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          API_KEY: ${{ secrets.API_TOKEN }}
+        run: |
+          envsubst < k8s/secrets.tmpl.yaml | kubectl apply -f -
+
+      - name: Apply config & service
+        run: |
+          kubectl apply -n "${K8S_NAMESPACE}" -f k8s/config.yaml
+          kubectl apply -n "${K8S_NAMESPACE}" -f k8s/service.yaml
+          # or: kubectl apply -n "${K8S_NAMESPACE}" -f k8s/service-public.yaml
+
+      - name: Apply deployment with current image
+        env:
+          IMAGE: ${{ env.DOCKERHUB_IMAGE }}@${{ env.IMAGE_DIGEST }}
+        run: |
+          sed "s#IMAGE_URI#${IMAGE}#g" k8s/deployment.yaml | kubectl apply -n "${K8S_NAMESPACE}" -f -
+          kubectl -n "${K8S_NAMESPACE}" rollout status deployment/todo-app-deployment --timeout=180s
